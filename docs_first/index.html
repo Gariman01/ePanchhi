@@ -1,0 +1,552 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="alexandrine parakeet">alexandrine parakeet</option>
+                                
+                                    <option value="introduced locally around the world">introduced locally around the world</option>
+                                
+                                    <option value="long slender tail and bright red bill">long slender tail and bright red bill</option>
+                                
+                                    <option value="male">male</option>
+                                
+                                    <option value="native to africa and south asia">native to africa and south asia</option>
+                                
+                                    <option value="nests in cavities">nests in cavities</option>
+                                
+                                    <option value="quiet">quiet</option>
+                                
+                                    <option value="raucous and social">raucous and social</option>
+                                
+                                    <option value="rose-ringed parakeet">rose-ringed parakeet</option>
+                                
+                                    <option value="sharp screeching calls">sharp screeching calls</option>
+                                
+                                    <option value="species">species</option>
+                                
+                                    <option value="trees">trees</option>
+                                
+                                    <option value="vibrantly bright green parakeet">vibrantly bright green parakeet</option>
+                                
+                                    <option value="wine-red patch on each shoulder">wine-red patch on each shoulder</option>
+                                
+                                    <option value="woodland, parks, and gardens">woodland, parks, and gardens</option>
+                                
+                                    <option value="appearance undernearth">appearance undernearth</option>
+                                
+                                    <option value="laughing dove">laughing dove</option>
+                                
+                                    <option value="tail">tail</option>
+                                
+                                    <option value="associated landscapes">associated landscapes</option>
+                                
+                                    <option value="avoids areas with extensive forests">avoids areas with extensive forests</option>
+                                
+                                    <option value="eurasian collared-dove">eurasian collared-dove</option>
+                                
+                                    <option value="black crescent on the nape">black crescent on the nape</option>
+                                
+                                    <option value="black kite">black kite</option>
+                                
+                                    <option value="flight style buoyant, gliding and changing direction with ease">flight style buoyant, gliding and changing direction with ease</option>
+                                
+                                    <option value="frequently forages in urban areas, rubbish dumps, aquatic habitats, and grassland">frequently forages in urban areas, rubbish dumps, aquatic habitats, and grassland</option>
+                                
+                                    <option value="juvenile">juvenile</option>
+                                
+                                    <option value="medium-sized raptor">medium-sized raptor</option>
+                                
+                                    <option value="nondescript raptor">nondescript raptor</option>
+                                
+                                    <option value="raptor with overall dark plumage">raptor with overall dark plumage</option>
+                                
+                                    <option value="sometimes solitary, but also gathers in large flocks on migration and at good feeding areas">sometimes solitary, but also gathers in large flocks on migration and at good feeding areas</option>
+                                
+                                    <option value="usually avoids heavily forested areas">usually avoids heavily forested areas</option>
+                                
+                                    <option value="varies considerably across range, but always note tail fork (can disappear when tail is fully open), and short head and neck">varies considerably across range, but always note tail fork (can disappear when tail is fully open), and short head and neck</option>
+                                
+                                    <option value="blackish">blackish</option>
+                                
+                                    <option value="grayish nape and sides">grayish nape and sides</option>
+                                
+                                    <option value="habitat">habitat</option>
+                                
+                                    <option value="house crow">house crow</option>
+                                
+                                    <option value="body">body</option>
+                                
+                                    <option value="call">call</option>
+                                
+                                    <option value="cliffs and caves">cliffs and caves</option>
+                                
+                                    <option value="rock pigeon">rock pigeon</option>
+                                
+                                    <option value="true wild birds">true wild birds</option>
+                                
+                                    <option value="compare with african collared-dove">compare with african collared-dove</option>
+                                
+                                    <option value="especially note tail pattern from below">especially note tail pattern from below</option>
+                                
+                                    <option value="farms and suburbs">farms and suburbs</option>
+                                
+                                    <option value="forms larger flocks in winter">forms larger flocks in winter</option>
+                                
+                                    <option value="introduced to, and established in, much of north america, the caribbean, and parts of central america">introduced to, and established in, much of north america, the caribbean, and parts of central america</option>
+                                
+                                    <option value="large pale dove">large pale dove</option>
+                                
+                                    <option value="mostly white, contrasting with the grayish undertail coverts">mostly white, contrasting with the grayish undertail coverts</option>
+                                
+                                    <option value="proportionately longer, square-tipped tail">proportionately longer, square-tipped tail</option>
+                                
+                                    <option value="typically seen in pairs or small loose groups">typically seen in pairs or small loose groups</option>
+                                
+                                    <option value="voice - a cooing ‘woop-wooo!-woop’">voice - a cooing ‘woop-wooo!-woop’</option>
+                                
+                                    <option value="which may occur in small feral populations or as an escapee throughout eurasian collared-dove’s range">which may occur in small feral populations or as an escapee throughout eurasian collared-dove’s range</option>
+                                
+                                    <option value="widespread and common throughout much of eurasia and northern africa">widespread and common throughout much of eurasia and northern africa</option>
+                                
+                                    <option value="with black extending down the outer edge of the tail feathers">with black extending down the outer edge of the tail feathers</option>
+                                
+                                    <option value="fairly large pigeon">fairly large pigeon</option>
+                                
+                                    <option value="feral varieties">feral varieties</option>
+                                
+                                    <option value="large flocks">large flocks</option>
+                                
+                                    <option value="feral varieties are common in cities and farmland">feral varieties are common in cities and farmland</option>
+                                
+                                    <option value="gossy black body">gossy black body</option>
+                                
+                                    <option value="human habitation">human habitation</option>
+                                
+                                    <option value="long bill">long bill</option>
+                                
+                                    <option value="medium-sized crow">medium-sized crow</option>
+                                
+                                    <option value="paler collar">paler collar</option>
+                                
+                                    <option value="primarily">primarily</option>
+                                
+                                    <option value="sides">sides</option>
+                                
+                                    <option value="slender">slender</option>
+                                
+                                    <option value="iridescent purple and green on neck">iridescent purple and green on neck</option>
+                                
+                                    <option value="size">size</option>
+                                
+                                    <option value="pale gray overall">pale gray overall</option>
+                                
+                                    <option value="two bold black wingbars">two bold black wingbars</option>
+                                
+                                    <option value="variable plumage">variable plumage</option>
+                                
+                                    <option value="western europe to central asia">western europe to central asia</option>
+                                
+                                    <option value="wild and feral populations throughout the world">wild and feral populations throughout the world</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 1, "id": "alexandrine parakeet", "label": "alexandrine parakeet", "shape": "dot", "size": 14}, {"group": 1, "id": "introduced locally around the world", "label": "introduced locally around the world", "shape": "dot", "size": 2}, {"group": 1, "id": "long slender tail and bright red bill", "label": "long slender tail and bright red bill", "shape": "dot", "size": 2}, {"group": 1, "id": "male", "label": "male", "shape": "dot", "size": 2}, {"group": 1, "id": "native to africa and south asia", "label": "native to africa and south asia", "shape": "dot", "size": 2}, {"group": 1, "id": "nests in cavities", "label": "nests in cavities", "shape": "dot", "size": 2}, {"group": 1, "id": "quiet", "label": "quiet", "shape": "dot", "size": 2}, {"group": 1, "id": "raucous and social", "label": "raucous and social", "shape": "dot", "size": 2}, {"group": 1, "id": "rose-ringed parakeet", "label": "rose-ringed parakeet", "shape": "dot", "size": 14}, {"group": 1, "id": "sharp screeching calls", "label": "sharp screeching calls", "shape": "dot", "size": 2}, {"group": 5, "id": "species", "label": "species", "shape": "dot", "size": 5}, {"group": 1, "id": "trees", "label": "trees", "shape": "dot", "size": 2}, {"group": 1, "id": "vibrantly bright green parakeet", "label": "vibrantly bright green parakeet", "shape": "dot", "size": 2}, {"group": 1, "id": "wine-red patch on each shoulder", "label": "wine-red patch on each shoulder", "shape": "dot", "size": 2}, {"group": 1, "id": "woodland, parks, and gardens", "label": "woodland, parks, and gardens", "shape": "dot", "size": 2}, {"group": 2, "id": "appearance undernearth", "label": "appearance undernearth", "shape": "dot", "size": 2}, {"group": 2, "id": "laughing dove", "label": "laughing dove", "shape": "dot", "size": 6}, {"group": 2, "id": "tail", "label": "tail", "shape": "dot", "size": 6}, {"group": 2, "id": "associated landscapes", "label": "associated landscapes", "shape": "dot", "size": 2}, {"group": 3, "id": "avoids areas with extensive forests", "label": "avoids areas with extensive forests", "shape": "dot", "size": 1}, {"group": 3, "id": "eurasian collared-dove", "label": "eurasian collared-dove", "shape": "dot", "size": 17}, {"group": 3, "id": "black crescent on the nape", "label": "black crescent on the nape", "shape": "dot", "size": 1}, {"group": 4, "id": "black kite", "label": "black kite", "shape": "dot", "size": 9}, {"group": 4, "id": "flight style buoyant, gliding and changing direction with ease", "label": "flight style buoyant, gliding and changing direction with ease", "shape": "dot", "size": 1}, {"group": 4, "id": "frequently forages in urban areas, rubbish dumps, aquatic habitats, and grassland", "label": "frequently forages in urban areas, rubbish dumps, aquatic habitats, and grassland", "shape": "dot", "size": 1}, {"group": 4, "id": "juvenile", "label": "juvenile", "shape": "dot", "size": 1}, {"group": 4, "id": "medium-sized raptor", "label": "medium-sized raptor", "shape": "dot", "size": 1}, {"group": 4, "id": "nondescript raptor", "label": "nondescript raptor", "shape": "dot", "size": 1}, {"group": 4, "id": "raptor with overall dark plumage", "label": "raptor with overall dark plumage", "shape": "dot", "size": 1}, {"group": 4, "id": "sometimes solitary, but also gathers in large flocks on migration and at good feeding areas", "label": "sometimes solitary, but also gathers in large flocks on migration and at good feeding areas", "shape": "dot", "size": 1}, {"group": 4, "id": "usually avoids heavily forested areas", "label": "usually avoids heavily forested areas", "shape": "dot", "size": 1}, {"group": 4, "id": "varies considerably across range, but always note tail fork (can disappear when tail is fully open), and short head and neck", "label": "varies considerably across range, but always note tail fork (can disappear when tail is fully open), and short head and neck", "shape": "dot", "size": 1}, {"group": 2, "id": "blackish", "label": "blackish", "shape": "dot", "size": 3}, {"group": 2, "id": "grayish nape and sides", "label": "grayish nape and sides", "shape": "dot", "size": 12}, {"group": 2, "id": "habitat", "label": "habitat", "shape": "dot", "size": 12}, {"group": 2, "id": "house crow", "label": "house crow", "shape": "dot", "size": 12}, {"group": 2, "id": "body", "label": "body", "shape": "dot", "size": 2}, {"group": 2, "id": "call", "label": "call", "shape": "dot", "size": 5}, {"group": 5, "id": "cliffs and caves", "label": "cliffs and caves", "shape": "dot", "size": 2}, {"group": 5, "id": "rock pigeon", "label": "rock pigeon", "shape": "dot", "size": 14}, {"group": 5, "id": "true wild birds", "label": "true wild birds", "shape": "dot", "size": 13}, {"group": 3, "id": "compare with african collared-dove", "label": "compare with african collared-dove", "shape": "dot", "size": 1}, {"group": 3, "id": "especially note tail pattern from below", "label": "especially note tail pattern from below", "shape": "dot", "size": 1}, {"group": 3, "id": "farms and suburbs", "label": "farms and suburbs", "shape": "dot", "size": 1}, {"group": 3, "id": "forms larger flocks in winter", "label": "forms larger flocks in winter", "shape": "dot", "size": 1}, {"group": 3, "id": "introduced to, and established in, much of north america, the caribbean, and parts of central america", "label": "introduced to, and established in, much of north america, the caribbean, and parts of central america", "shape": "dot", "size": 1}, {"group": 3, "id": "large pale dove", "label": "large pale dove", "shape": "dot", "size": 1}, {"group": 3, "id": "mostly white, contrasting with the grayish undertail coverts", "label": "mostly white, contrasting with the grayish undertail coverts", "shape": "dot", "size": 1}, {"group": 3, "id": "proportionately longer, square-tipped tail", "label": "proportionately longer, square-tipped tail", "shape": "dot", "size": 1}, {"group": 3, "id": "typically seen in pairs or small loose groups", "label": "typically seen in pairs or small loose groups", "shape": "dot", "size": 1}, {"group": 3, "id": "voice - a cooing \u2018woop-wooo!-woop\u2019", "label": "voice - a cooing \u2018woop-wooo!-woop\u2019", "shape": "dot", "size": 1}, {"group": 3, "id": "which may occur in small feral populations or as an escapee throughout eurasian collared-dove\u2019s range", "label": "which may occur in small feral populations or as an escapee throughout eurasian collared-dove\u2019s range", "shape": "dot", "size": 1}, {"group": 3, "id": "widespread and common throughout much of eurasia and northern africa", "label": "widespread and common throughout much of eurasia and northern africa", "shape": "dot", "size": 1}, {"group": 3, "id": "with black extending down the outer edge of the tail feathers", "label": "with black extending down the outer edge of the tail feathers", "shape": "dot", "size": 1}, {"group": 5, "id": "fairly large pigeon", "label": "fairly large pigeon", "shape": "dot", "size": 2}, {"group": 5, "id": "feral varieties", "label": "feral varieties", "shape": "dot", "size": 3}, {"group": 5, "id": "large flocks", "label": "large flocks", "shape": "dot", "size": 3}, {"group": 5, "id": "feral varieties are common in cities and farmland", "label": "feral varieties are common in cities and farmland", "shape": "dot", "size": 2}, {"group": 2, "id": "gossy black body", "label": "gossy black body", "shape": "dot", "size": 3}, {"group": 2, "id": "human habitation", "label": "human habitation", "shape": "dot", "size": 3}, {"group": 2, "id": "long bill", "label": "long bill", "shape": "dot", "size": 3}, {"group": 2, "id": "medium-sized crow", "label": "medium-sized crow", "shape": "dot", "size": 3}, {"group": 2, "id": "paler collar", "label": "paler collar", "shape": "dot", "size": 3}, {"group": 2, "id": "primarily", "label": "primarily", "shape": "dot", "size": 3}, {"group": 2, "id": "sides", "label": "sides", "shape": "dot", "size": 3}, {"group": 2, "id": "slender", "label": "slender", "shape": "dot", "size": 3}, {"group": 5, "id": "iridescent purple and green on neck", "label": "iridescent purple and green on neck", "shape": "dot", "size": 2}, {"group": 2, "id": "size", "label": "size", "shape": "dot", "size": 2}, {"group": 5, "id": "pale gray overall", "label": "pale gray overall", "shape": "dot", "size": 2}, {"group": 5, "id": "two bold black wingbars", "label": "two bold black wingbars", "shape": "dot", "size": 2}, {"group": 5, "id": "variable plumage", "label": "variable plumage", "shape": "dot", "size": 2}, {"group": 5, "id": "western europe to central asia", "label": "western europe to central asia", "shape": "dot", "size": 2}, {"group": 5, "id": "wild and feral populations throughout the world", "label": "wild and feral populations throughout the world", "shape": "dot", "size": 2}]);
+                  edges = new vis.DataSet([{"from": "alexandrine parakeet", "title": "contextual proximity", "to": "introduced locally around the world", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "long slender tail and bright red bill", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "male", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "native to africa and south asia", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "nests in cavities", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "quiet", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "raucous and social", "width": 1}, {"from": "alexandrine parakeet", "title": "The Rose-ringed Parakeet closely resembles the larger Alexandrine Parakeet.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "sharp screeching calls", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "species", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "trees", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "vibrantly bright green parakeet", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "wine-red patch on each shoulder", "width": 1}, {"from": "alexandrine parakeet", "title": "contextual proximity", "to": "woodland, parks, and gardens", "width": 1}, {"from": "appearance undernearth", "title": "contextual proximity", "to": "laughing dove", "width": 1}, {"from": "appearance undernearth", "title": "The tail of the Laughing Dove is all white underneath.,contextual proximity", "to": "tail", "width": 1}, {"from": "associated landscapes", "title": "contextual proximity", "to": "laughing dove", "width": 1}, {"from": "associated landscapes", "title": "contextual proximity", "to": "tail", "width": 1}, {"from": "avoids areas with extensive forests", "title": "The Eurasian Collared-Dove avoids areas with extensive forests.,contextual proximity", "to": "eurasian collared-dove", "width": 1}, {"from": "black crescent on the nape", "title": "The Eurasian Collared-Dove has a black crescent on its nape.,contextual proximity", "to": "eurasian collared-dove", "width": 1}, {"from": "black kite", "title": "The flight of the Black Kite is characterized by its ability to glide smoothly and change direction effortlessly.,contextual proximity", "to": "flight style buoyant, gliding and changing direction with ease", "width": 1}, {"from": "black kite", "title": "The Black Kite is often found foraging in urban environments, waste disposal sites, aquatic habitats, and grasslands.,contextual proximity", "to": "frequently forages in urban areas, rubbish dumps, aquatic habitats, and grassland", "width": 1}, {"from": "black kite", "title": "The juvenile Black Kite is paler and more contrastingly marked than the adult.,contextual proximity", "to": "juvenile", "width": 1}, {"from": "black kite", "title": "contextual proximity", "to": "medium-sized raptor", "width": 1}, {"from": "black kite", "title": "contextual proximity", "to": "nondescript raptor", "width": 1}, {"from": "black kite", "title": "contextual proximity", "to": "raptor with overall dark plumage", "width": 1}, {"from": "black kite", "title": "The Black Kite can be found both as a solitary bird or in large groups. It often gathers in large numbers during migration and at good food sources.,contextual proximity", "to": "sometimes solitary, but also gathers in large flocks on migration and at good feeding areas", "width": 1}, {"from": "black kite", "title": "The Black Kite typically prefers open habitats and tends to avoid heavily forested areas.,contextual proximity", "to": "usually avoids heavily forested areas", "width": 1}, {"from": "black kite", "title": "The appearance of the Black Kite can change significantly across its range. It always has a distinctive tail fork, which may not be visible when the tail is fully spread. Additionally, it has a short head and neck.,contextual proximity", "to": "varies considerably across range, but always note tail fork (can disappear when tail is fully open), and short head and neck", "width": 1}, {"from": "blackish", "title": "contextual proximity", "to": "grayish nape and sides", "width": 1}, {"from": "blackish", "title": "contextual proximity", "to": "habitat", "width": 1}, {"from": "blackish", "title": "The House Crow has a blackish body, as mentioned in the context.,contextual proximity", "to": "house crow", "width": 1}, {"from": "body", "title": "contextual proximity", "to": "laughing dove", "width": 1}, {"from": "body", "title": "contextual proximity", "to": "tail", "width": 1}, {"from": "call", "title": "contextual proximity", "to": "grayish nape and sides", "width": 1}, {"from": "call", "title": "contextual proximity", "to": "habitat", "width": 1}, {"from": "call", "title": "contextual proximity", "to": "house crow", "width": 1}, {"from": "call", "title": "contextual proximity", "to": "laughing dove", "width": 1}, {"from": "call", "title": "contextual proximity", "to": "tail", "width": 1}, {"from": "cliffs and caves", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "cliffs and caves", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "compare with african collared-dove", "title": "The Eurasian Collared-Dove should be compared with the African Collared-Dove.,contextual proximity", "to": "eurasian collared-dove", "width": 1}, {"from": "especially note tail pattern from below", "title": "Particular attention should be paid to the tail pattern of the Eurasian Collared-Dove from below.,contextual proximity", "to": "eurasian collared-dove", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "farms and suburbs", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "forms larger flocks in winter", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "introduced to, and established in, much of north america, the caribbean, and parts of central america", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "large pale dove", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "mostly white, contrasting with the grayish undertail coverts", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "proportionately longer, square-tipped tail", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "species", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "typically seen in pairs or small loose groups", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "voice - a cooing \u2018woop-wooo!-woop\u2019", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "which may occur in small feral populations or as an escapee throughout eurasian collared-dove\u2019s range", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "widespread and common throughout much of eurasia and northern africa", "width": 1}, {"from": "eurasian collared-dove", "title": "contextual proximity", "to": "with black extending down the outer edge of the tail feathers", "width": 1}, {"from": "fairly large pigeon", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "fairly large pigeon", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "feral varieties", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "feral varieties", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "feral varieties", "title": "Feral varieties of Rock Pigeons often live in large flocks.", "to": "large flocks", "width": 1}, {"from": "feral varieties are common in cities and farmland", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "feral varieties are common in cities and farmland", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "gossy black body", "title": "contextual proximity", "to": "grayish nape and sides", "width": 1}, {"from": "gossy black body", "title": "contextual proximity", "to": "habitat", "width": 1}, {"from": "gossy black body", "title": "The House Crow has a glossy black body, as stated in the context.,contextual proximity", "to": "house crow", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "habitat", "width": 1}, {"from": "grayish nape and sides", "title": "The grayish nape and sides of the House Crow are mentioned as part of its physical description in the context.,contextual proximity", "to": "house crow", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "human habitation", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "long bill", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "medium-sized crow", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "paler collar", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "primarily", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "sides", "width": 1}, {"from": "grayish nape and sides", "title": "contextual proximity", "to": "slender", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "house crow", "width": 1}, {"from": "habitat", "title": "The Habitat referred to here is mostly around human habitation.,contextual proximity", "to": "human habitation", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "long bill", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "medium-sized crow", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "paler collar", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "primarily", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "sides", "width": 1}, {"from": "habitat", "title": "contextual proximity", "to": "slender", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "human habitation", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "long bill", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "medium-sized crow", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "paler collar", "width": 1}, {"from": "house crow", "title": "The House Crow primarily feeds on leftover rubbish from humans.,contextual proximity", "to": "primarily", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "sides", "width": 1}, {"from": "house crow", "title": "contextual proximity", "to": "slender", "width": 1}, {"from": "introduced locally around the world", "title": "The Rose-ringed Parakeet has been introduced locally around the world, from Europe and the Caribbean to Japan and Hawaii.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "iridescent purple and green on neck", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "iridescent purple and green on neck", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "large flocks", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "large flocks", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "laughing dove", "title": "contextual proximity", "to": "size", "width": 1}, {"from": "laughing dove", "title": "The tail of the Laughing Dove is strikingly long and has white corners and a grey center, but is all white underneath.,contextual proximity", "to": "tail", "width": 1}, {"from": "long slender tail and bright red bill", "title": "The Rose-ringed Parakeet has a long slender tail and a bright red bill.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "male", "title": "The male Rose-ringed Parakeet has a narrow black-and-pink neck ring.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "native to africa and south asia", "title": "The Rose-ringed Parakeet is native to Africa and South Asia.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "nests in cavities", "title": "The Rose-ringed Parakeet nests in cavities, including holes in buildings.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "pale gray overall", "title": "contextual proximity", "to": "rock pigeon", "width": 1}, {"from": "pale gray overall", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "quiet", "title": "If quiet, the Rose-ringed Parakeet can be easily overlooked as its bright green plumage blends easily with foliage.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "raucous and social", "title": "The Rose-ringed Parakeet is raucous and social, often appearing in noisy groups.,contextual proximity", "to": "rose-ringed parakeet", "width": 1}, {"from": "rock pigeon", "title": "contextual proximity", "to": "species", "width": 1}, {"from": "rock pigeon", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "rock pigeon", "title": "A Rock Pigeon has two bold black wingbars.,contextual proximity", "to": "two bold black wingbars", "width": 1}, {"from": "rock pigeon", "title": "The plumage (feathers) of a Rock Pigeon can vary, with some being identical to wild-type birds, but it can also be completely black, white, or orangey-brown and any combination in between.,contextual proximity", "to": "variable plumage", "width": 1}, {"from": "rock pigeon", "title": "contextual proximity", "to": "western europe to central asia", "width": 1}, {"from": "rock pigeon", "title": "The Rock Pigeon has both wild and feral populations that are distributed throughout the world.,contextual proximity", "to": "wild and feral populations throughout the world", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "sharp screeching calls", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "species", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "trees", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "vibrantly bright green parakeet", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "wine-red patch on each shoulder", "width": 1}, {"from": "rose-ringed parakeet", "title": "contextual proximity", "to": "woodland, parks, and gardens", "width": 1}, {"from": "size", "title": "contextual proximity", "to": "tail", "width": 1}, {"from": "species", "title": "contextual proximity", "to": "true wild birds", "width": 1}, {"from": "true wild birds", "title": "contextual proximity", "to": "two bold black wingbars", "width": 1}, {"from": "true wild birds", "title": "contextual proximity", "to": "variable plumage", "width": 1}, {"from": "true wild birds", "title": "True wild Rock Pigeons can be found from western Europe to central Asia.,contextual proximity", "to": "western europe to central asia", "width": 1}, {"from": "true wild birds", "title": "contextual proximity", "to": "wild and feral populations throughout the world", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
